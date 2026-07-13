@@ -1,22 +1,65 @@
-# Asana Demo — Data-Driven Playwright Suite
+# Asana Demo — Playwright Test Suite
 
-A single, parameterized Playwright spec that drives 6 test cases from
-`data/testCases.json`. Adding a 7th case later means adding a JSON entry —
-no new code.
+A data-driven Playwright + TypeScript test suite that verifies task cards,
+their board columns, and their tags across two projects in the Asana-style
+demo app.
 
-## Structure
+## Tech Stack
+
+- [Playwright](https://playwright.dev/) (`@playwright/test`)
+- TypeScript
+- GitHub Actions (CI)
+
+## Project Structure
 
 ```
 asana-playwright/
-├── playwright.config.ts   # base URL, retries, tracing/screenshots/video
+├── playwright.config.ts       # base URL, timeouts, tracing/screenshots/video
 ├── tsconfig.json
-├── data/testCases.json    # the 6 (or more) scenarios — the "data" driving the tests
+├── data/
+│   └── testCases.json         # test scenarios (project, task, column, tags)
 ├── pages/
-│   ├── LoginPage.ts        # login form interactions
-│   └── BoardPage.ts        # project nav + column/card/tag lookups
-└── tests/
-    └── board.spec.ts       # loops over testCases.json, one test per entry
+│   ├── LoginPage.ts           # login form interactions
+│   └── BoardPage.ts           # project navigation, column/card/tag lookups
+├── tests/
+│   └── board.spec.ts          # test spec, parameterized over testCases.json
+└── .github/workflows/
+    └── playwright.yml         # CI: runs the suite on every push/PR
 ```
+
+## Approach
+
+Rather than writing a separate test per scenario, `board.spec.ts` defines a
+single parameterized test that loops over `data/testCases.json`. Each entry
+in that file describes one scenario:
+
+```json
+{
+  "id": "TC1",
+  "project": "Web Application",
+  "task": "Implement user authentication",
+  "column": "To Do",
+  "tags": ["Feature", "High Priority"]
+}
+```
+
+Adding, removing, or editing a test case only requires editing the JSON
+file — no changes to the test logic itself. Page interactions (login,
+navigation, locating a task card, checking its tags) are encapsulated in
+`pages/LoginPage.ts` and `pages/BoardPage.ts` using the Page Object Model
+pattern, keeping the spec file focused on *what* is being verified rather
+than *how*.
+
+## Test Cases
+
+| ID  | Project           | Task                          | Column      | Tags                     |
+|-----|-------------------|--------------------------------|-------------|--------------------------|
+| TC1 | Web Application   | Implement user authentication  | To Do       | Feature, High Priority   |
+| TC2 | Web Application   | Fix navigation bug             | To Do       | Bug                      |
+| TC3 | Web Application   | Design system updates          | In Progress | Design                   |
+| TC4 | Mobile Application| Push notification system       | To Do       | Feature                  |
+| TC5 | Mobile Application| Offline mode                   | In Progress | Feature, High Priority   |
+| TC6 | Mobile Application| App icon design                | Done        | Design                   |
 
 ## Setup
 
@@ -25,45 +68,24 @@ npm install
 npx playwright install chromium
 ```
 
-## Run
+## Running the Tests
 
 ```bash
-npm test              # headless
-npm run test:headed   # see the browser
-npm run test:ui       # Playwright's interactive UI mode (best for debugging selectors)
-npm run report        # open the HTML report after a run
+npm test              # headless run
+npm run test:headed   # run with a visible browser
+npm run test:ui       # Playwright's interactive UI mode
+npm run report        # open the HTML report from the last run
 ```
 
-## Before you submit — 2 things to verify against the live app
+## Continuous Integration
 
-I built this from the login credentials in the brief and the two board
-screenshots you shared (Web Application / Mobile Application columns and
-cards). I could not render the live site directly to confirm real
-selectors, so there are two spots to sanity-check locally:
+Every push and pull request to `main` triggers `.github/workflows/playwright.yml`,
+which installs dependencies, installs the Chromium browser, runs the full
+suite, and uploads the HTML report as a build artifact.
 
-1. **Login form** (`pages/LoginPage.ts`) — I never saw this screen, only the
-   post-login board. The selectors use common patterns (input types,
-   placeholder text, accessible button names) with fallbacks, but you
-   should confirm them once. Fastest way:
-   ```bash
-   npm run codegen
-   ```
-   Log in manually; Playwright will print the exact selectors it recorded.
-   Swap them into `LoginPage.login()` if different.
+## Configuration
 
-2. **Column/card DOM nesting** (`pages/BoardPage.ts`) — I matched columns by
-   their heading text (e.g. `To Do (2)`) and cards by task title, then walk
-   up the DOM to the enclosing card/column container. I marked the two
-   spots with `ADJUSTABLE` comments — if a test fails on the tag assertion
-   but the task-visibility assertion passes, that's the signal to widen the
-   ancestor level by one (e.g. `xpath=..` → `xpath=../..`).
-
-Everything else (project names, task titles, columns, tag names) is copied
-directly from your screenshots, so those values should already be correct.
-
-## Why this satisfies "data-driven"
-
-`tests/board.spec.ts` contains exactly one `test()` body inside a `for`
-loop over the imported JSON array — there's no per-case duplication. Run
-`npx playwright test --list` to confirm all 6 named cases are generated
-from that single block.
+Base URL and other run settings live in `playwright.config.ts`. Login
+credentials are passed directly in `tests/board.spec.ts`; for a real
+project these would move to environment variables, but they're inlined
+here since they're fixed demo credentials.
