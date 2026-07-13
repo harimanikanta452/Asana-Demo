@@ -13,9 +13,11 @@ export class BoardPage {
 
     await navItem.click();
 
-    // Confirm navigation landed on the right project (main heading updates).
+    // Confirm navigation landed on the right project. Scoped to the main
+    // content banner because the sidebar nav item is ALSO an <h2> with the
+    // same accessible name, which caused a strict-mode violation here.
     await expect(
-      this.page.getByRole('heading', { name: projectName, exact: true })
+      this.page.getByRole('banner').getByRole('heading', { name: projectName, exact: true })
     ).toBeVisible();
   }
 
