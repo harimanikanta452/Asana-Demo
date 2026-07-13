@@ -1,0 +1,16 @@
+{
+  "name": "asana-demo-playwright",
+  "version": "1.0.0",
+  "description": "Data-driven Playwright test suite for the Asana-like demo app",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "codegen": "playwright codegen https://create-asana-like-pr-39y5.bolt.host/",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.47.0",
+    "typescript": "^5.5.0"
+  }
+}
